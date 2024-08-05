@@ -1,20 +1,19 @@
 import { Button } from "@mui/joy";
 import copy from "copy-to-clipboard";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import Empty from "@/components/Empty";
 import Icon from "@/components/Icon";
-import MemoFilter from "@/components/MemoFilter";
+import MemoFilters from "@/components/MemoFilters";
 import MemoView from "@/components/MemoView";
 import MobileHeader from "@/components/MobileHeader";
 import UserAvatar from "@/components/UserAvatar";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { getTimeStampByDate } from "@/helpers/datetime";
-import useFilterWithUrlParams from "@/hooks/useFilterWithUrlParams";
 import useLoading from "@/hooks/useLoading";
-import { useMemoList, useMemoStore, useUserStore } from "@/store/v1";
-import { User } from "@/types/proto/api/v2/user_service";
+import { useMemoFilterStore, useMemoList, useMemoStore, useUserStore } from "@/store/v1";
+import { User } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 
 const UserProfile = () => {
@@ -25,9 +24,9 @@ const UserProfile = () => {
   const [user, setUser] = useState<User>();
   const memoStore = useMemoStore();
   const memoList = useMemoList();
+  const memoFilterStore = useMemoFilterStore();
   const [isRequesting, setIsRequesting] = useState(true);
-  const nextPageTokenRef = useRef<string | undefined>(undefined);
-  const { tag: tagQuery, text: textQuery } = useFilterWithUrlParams();
+  const [nextPageToken, setNextPageToken] = useState<string>("");
   const sortedMemos = memoList.value
     .sort((a, b) => getTimeStampByDate(b.displayTime) - getTimeStampByDate(a.displayTime))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned));
@@ -59,35 +58,39 @@ const UserProfile = () => {
       return;
     }
 
-    nextPageTokenRef.current = undefined;
     memoList.reset();
-    fetchMemos();
-  }, [user, tagQuery, textQuery]);
+    fetchMemos("");
+  }, [user, memoFilterStore.filters]);
 
-  const fetchMemos = async () => {
+  const fetchMemos = async (nextPageToken: string) => {
     if (!user) {
       return;
     }
 
+    setIsRequesting(true);
     const filters = [`creator == "${user.name}"`, `row_status == "NORMAL"`, `order_by_pinned == true`];
     const contentSearch: string[] = [];
-    if (tagQuery) {
-      contentSearch.push(JSON.stringify(`#${tagQuery}`));
-    }
-    if (textQuery) {
-      contentSearch.push(JSON.stringify(textQuery));
+    const tagSearch: string[] = [];
+    for (const filter of memoFilterStore.filters) {
+      if (filter.factor === "contentSearch") {
+        contentSearch.push(`"${filter.value}"`);
+      } else if (filter.factor === "tagSearch") {
+        tagSearch.push(`"${filter.value}"`);
+      }
     }
     if (contentSearch.length > 0) {
       filters.push(`content_search == [${contentSearch.join(", ")}]`);
     }
-    setIsRequesting(true);
-    const data = await memoStore.fetchMemos({
+    if (tagSearch.length > 0) {
+      filters.push(`tag_search == [${tagSearch.join(", ")}]`);
+    }
+    const response = await memoStore.fetchMemos({
       pageSize: DEFAULT_LIST_MEMOS_PAGE_SIZE,
       filter: filters.join(" && "),
-      pageToken: nextPageTokenRef.current,
+      pageToken: nextPageToken,
     });
     setIsRequesting(false);
-    nextPageTokenRef.current = data.nextPageToken;
+    setNextPageToken(response.nextPageToken);
   };
 
   const handleCopyProfileLink = () => {
@@ -107,11 +110,6 @@ const UserProfile = () => {
           (user ? (
             <>
               <div className="my-4 w-full flex justify-end items-center gap-2">
-                <a className="" href={`/u/${encodeURIComponent(user?.username)}/rss.xml`} target="_blank" rel="noopener noreferrer">
-                  <Button color="neutral" variant="outlined" endDecorator={<Icon.Rss className="w-4 h-auto opacity-60" />}>
-                    RSS
-                  </Button>
-                </a>
                 <Button
                   color="neutral"
                   variant="outlined"
@@ -132,16 +130,16 @@ const UserProfile = () => {
                   </p>
                 </div>
               </div>
-              <MemoFilter className="px-2 pb-3" />
+              <MemoFilters />
               {sortedMemos.map((memo) => (
-                <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned />
+                <MemoView key={`${memo.name}-${memo.displayTime}`} memo={memo} showVisibility showPinned compact />
               ))}
               {isRequesting ? (
                 <div className="flex flex-row justify-center items-center w-full my-4 text-gray-400">
                   <Icon.Loader className="w-4 h-auto animate-spin mr-1" />
                   <p className="text-sm italic">{t("memo.fetching-data")}</p>
                 </div>
-              ) : !nextPageTokenRef.current ? (
+              ) : !nextPageToken ? (
                 sortedMemos.length === 0 && (
                   <div className="w-full mt-12 mb-8 flex flex-col justify-center items-center italic">
                     <Empty />
@@ -150,7 +148,11 @@ const UserProfile = () => {
                 )
               ) : (
                 <div className="w-full flex flex-row justify-center items-center my-4">
-                  <Button variant="plain" endDecorator={<Icon.ArrowDown className="w-5 h-auto" />} onClick={fetchMemos}>
+                  <Button
+                    variant="plain"
+                    endDecorator={<Icon.ArrowDown className="w-5 h-auto" />}
+                    onClick={() => fetchMemos(nextPageToken)}
+                  >
                     {t("memo.fetch-more")}
                   </Button>
                 </div>

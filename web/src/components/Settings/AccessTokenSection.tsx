@@ -4,16 +4,15 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { userServiceClient } from "@/grpcweb";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { UserAccessToken } from "@/types/proto/api/v2/user_service";
+import { UserAccessToken } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import showCreateAccessTokenDialog from "../CreateAccessTokenDialog";
-import { showCommonDialog } from "../Dialog/CommonDialog";
 import Icon from "../Icon";
 import LearnMore from "../LearnMore";
 
 const listAccessTokens = async (name: string) => {
   const { accessTokens } = await userServiceClient.listUserAccessTokens({ name });
-  return accessTokens;
+  return accessTokens.sort((a, b) => (b.issuedAt?.getTime() ?? 0) - (a.issuedAt?.getTime() ?? 0));
 };
 
 const AccessTokenSection = () => {
@@ -38,16 +37,13 @@ const AccessTokenSection = () => {
   };
 
   const handleDeleteAccessToken = async (accessToken: string) => {
-    showCommonDialog({
-      title: "Delete Access Token",
-      content: `Are you sure to delete access token \`${getFormatedAccessToken(accessToken)}\`? You cannot undo this action.`,
-      style: "danger",
-      dialogName: "delete-access-token-dialog",
-      onConfirm: async () => {
-        await userServiceClient.deleteUserAccessToken({ name: currentUser.name, accessToken: accessToken });
-        setUserAccessTokens(userAccessTokens.filter((token) => token.accessToken !== accessToken));
-      },
-    });
+    const confirmed = window.confirm(
+      `Are you sure to delete access token \`${getFormatedAccessToken(accessToken)}\`? You cannot undo this action.`,
+    );
+    if (confirmed) {
+      await userServiceClient.deleteUserAccessToken({ name: currentUser.name, accessToken: accessToken });
+      setUserAccessTokens(userAccessTokens.filter((token) => token.accessToken !== accessToken));
+    }
   };
 
   const getFormatedAccessToken = (accessToken: string) => {

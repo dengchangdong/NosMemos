@@ -1,0 +1,10 @@
+{
+  "name": "memos",
+  "scripts": {
+    "dev": "cd ./web && pnpm dev",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "husky": "^8.0.3"
+  }
+}

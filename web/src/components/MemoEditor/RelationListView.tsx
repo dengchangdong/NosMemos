@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMemoStore } from "@/store/v1";
-import { MemoRelation, MemoRelation_Type } from "@/types/proto/api/v2/memo_relation_service";
-import { Memo } from "@/types/proto/api/v2/memo_service";
+import { MemoRelation, MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
+import { Memo } from "@/types/proto/api/v1/memo_service";
 import Icon from "../Icon";
 
 interface Props {
@@ -42,7 +42,7 @@ const RelationListView = (props: Props) => {
                 onClick={() => handleDeleteRelation(memo)}
               >
                 <Icon.Link className="w-4 h-auto shrink-0 opacity-80" />
-                <span className="mx-1 max-w-full text-ellipsis whitespace-nowrap overflow-hidden">{memo.content}</span>
+                <span className="mx-1 max-w-full text-ellipsis whitespace-nowrap overflow-hidden">{memo.snippet}</span>
                 <Icon.X className="w-4 h-auto cursor-pointer shrink-0 opacity-60 hover:opacity-100" />
               </div>
             );

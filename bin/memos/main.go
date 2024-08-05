@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/usememos/memos/internal/jobs"
 	"github.com/usememos/memos/server"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
@@ -37,14 +36,13 @@ var (
 	data            string
 	driver          string
 	dsn             string
-	serveFrontend   bool
-	allowedOrigins  []string
+	public          bool
 	instanceProfile *profile.Profile
 
 	rootCmd = &cobra.Command{
 		Use:   "memos",
 		Short: `An open source, lightweight note-taking service. Easily capture and share your great thoughts.`,
-		Run: func(_cmd *cobra.Command, _args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			ctx, cancel := context.WithCancel(context.Background())
 			dbDriver, err := db.NewDBDriver(instanceProfile)
 			if err != nil {
@@ -77,16 +75,6 @@ var (
 			// The default signal sent by the `kill` command is SIGTERM,
 			// which is taken as the graceful shutdown signal for many systems, eg., Kubernetes, Gunicorn.
 			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-			go func() {
-				<-c
-				s.Shutdown(ctx)
-				cancel()
-			}()
-
-			printGreetings()
-
-			// update (pre-sign) object storage links if applicable
-			go jobs.RunPreSignLinks(ctx, storeInstance)
 
 			if err := s.Start(ctx); err != nil {
 				if err != http.ErrServerClosed {
@@ -94,6 +82,14 @@ var (
 					cancel()
 				}
 			}
+
+			printGreetings()
+
+			go func() {
+				<-c
+				s.Shutdown(ctx)
+				cancel()
+			}()
 
 			// Wait for CTRL-C.
 			<-ctx.Done()
@@ -114,8 +110,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "", "data directory")
 	rootCmd.PersistentFlags().StringVarP(&driver, "driver", "", "", "database driver")
 	rootCmd.PersistentFlags().StringVarP(&dsn, "dsn", "", "", "database source name(aka. DSN)")
-	rootCmd.PersistentFlags().BoolVarP(&serveFrontend, "frontend", "", true, "serve frontend files")
-	rootCmd.PersistentFlags().StringArrayVarP(&allowedOrigins, "origins", "", []string{}, "CORS allowed domain origins")
+	rootCmd.PersistentFlags().BoolVarP(&public, "public", "", false, "")
 
 	err := viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
 	if err != nil {
@@ -141,11 +136,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	err = viper.BindPFlag("frontend", rootCmd.PersistentFlags().Lookup("frontend"))
-	if err != nil {
-		panic(err)
-	}
-	err = viper.BindPFlag("origins", rootCmd.PersistentFlags().Lookup("origins"))
+	err = viper.BindPFlag("public", rootCmd.PersistentFlags().Lookup("public"))
 	if err != nil {
 		panic(err)
 	}
@@ -154,8 +145,7 @@ func init() {
 	viper.SetDefault("driver", "sqlite")
 	viper.SetDefault("addr", "")
 	viper.SetDefault("port", 8081)
-	viper.SetDefault("frontend", true)
-	viper.SetDefault("origins", []string{})
+	viper.SetDefault("public", false)
 	viper.SetEnvPrefix("memos")
 }
 
@@ -164,7 +154,7 @@ func initConfig() {
 	var err error
 	instanceProfile, err = profile.GetProfile()
 	if err != nil {
-		fmt.Printf("failed to get profile, error: %+v\n", err)
+		slog.Error("failed to get profile", err)
 		return
 	}
 
@@ -176,10 +166,10 @@ dsn: %s
 addr: %s
 port: %d
 mode: %s
+public: %t
 driver: %s
-frontend: %t
 ---
-`, instanceProfile.Version, instanceProfile.Data, instanceProfile.DSN, instanceProfile.Addr, instanceProfile.Port, instanceProfile.Mode, instanceProfile.Driver, instanceProfile.Frontend)
+`, instanceProfile.Version, instanceProfile.Data, instanceProfile.DSN, instanceProfile.Addr, instanceProfile.Port, instanceProfile.Mode, instanceProfile.Public, instanceProfile.Driver)
 }
 
 func printGreetings() {

@@ -6,13 +6,15 @@ import { memoServiceClient } from "@/grpcweb";
 import { DEFAULT_LIST_MEMOS_PAGE_SIZE } from "@/helpers/consts";
 import { getDateTimeString } from "@/helpers/datetime";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { Memo } from "@/types/proto/api/v2/memo_service";
+import { Memo } from "@/types/proto/api/v1/memo_service";
 import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
 import Icon from "./Icon";
 
 interface Props extends DialogProps {
   onConfirm: (memos: Memo[], embedded?: boolean) => void;
+  // Custom filter function for filtering memos.
+  filter?: (memo: Memo) => boolean;
 }
 
 const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
@@ -23,14 +25,14 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [fetchedMemos, setFetchedMemos] = useState<Memo[]>([]);
   const [selectedMemos, setSelectedMemos] = useState<Memo[]>([]);
-  const [embedded, setEmbedded] = useState<boolean>(false);
-  const filteredMemos = fetchedMemos.filter((memo) => !selectedMemos.includes(memo));
+  const [embedded, setEmbedded] = useState<boolean>(true);
+  const filteredMemos = fetchedMemos.filter((memo) => !selectedMemos.includes(memo) && (!props.filter || props.filter(memo)));
 
   useDebounce(
     async () => {
       setIsFetching(true);
       try {
-        const filters = [`creator == "${user.name}"`, `row_status == "NORMAL"`];
+        const filters = [`creator == "${user.name}"`, `row_status == "NORMAL"`, `include_comments == true`];
         if (searchText) {
           filters.push(`content_search == [${JSON.stringify(searchText)}]`);
         }
@@ -96,7 +98,7 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
           size="md"
           clearOnBlur
           disableClearable
-          placeholder={t("reference.search-bar-placeholder")}
+          placeholder={t("reference.search-placeholder")}
           noOptionsText={t("reference.no-memos-found")}
           options={filteredMemos}
           loading={isFetching}
@@ -104,16 +106,14 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
           value={selectedMemos}
           multiple
           onInputChange={(_, value) => setSearchText(value.trim())}
-          getOptionKey={(option) => option.name}
-          getOptionLabel={(option) => option.content}
-          isOptionEqualToValue={(option, value) => option.name === value.name}
-          renderOption={(props, option) => (
+          getOptionKey={(memo) => memo.name}
+          getOptionLabel={(memo) => memo.content}
+          isOptionEqualToValue={(memo, value) => memo.name === value.name}
+          renderOption={(props, memo) => (
             <AutocompleteOption {...props}>
               <div className="w-full flex flex-col justify-start items-start">
-                <p className="text-xs text-gray-400 select-none">{getDateTimeString(option.displayTime)}</p>
-                <p className="mt-0.5 text-sm leading-5 line-clamp-2">
-                  {searchText ? getHighlightedContent(option.content) : option.content}
-                </p>
+                <p className="text-xs text-gray-400 select-none">{getDateTimeString(memo.displayTime)}</p>
+                <p className="mt-0.5 text-sm leading-5 line-clamp-2">{searchText ? getHighlightedContent(memo.content) : memo.snippet}</p>
               </div>
             </AutocompleteOption>
           )}
@@ -145,7 +145,7 @@ const CreateMemoRelationDialog: React.FC<Props> = (props: Props) => {
   );
 };
 
-function showCreateMemoRelationDialog(props: Omit<Props, "destroy" | "hide">) {
+function showCreateMemoRelationDialog(props: Omit<Props, "destroy">) {
   generateDialog(
     {
       className: "create-memo-relation-dialog",

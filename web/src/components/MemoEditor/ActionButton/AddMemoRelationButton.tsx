@@ -4,7 +4,8 @@ import { useContext } from "react";
 import toast from "react-hot-toast";
 import showCreateMemoRelationDialog from "@/components/CreateMemoRelationDialog";
 import Icon from "@/components/Icon";
-import { MemoRelation_Type } from "@/types/proto/api/v2/memo_relation_service";
+import { MemoRelation_Type } from "@/types/proto/api/v1/memo_relation_service";
+import { Memo } from "@/types/proto/api/v1/memo_service";
 import { EditorRefActions } from "../Editor";
 import { MemoEditorContext } from "../types";
 
@@ -51,10 +52,12 @@ const AddMemoRelationButton = (props: Props) => {
               })),
               ...context.relationList,
             ].filter((relation) => relation.relatedMemo !== context.memoName),
-            "relatedMemoId",
+            "relatedMemo",
           ),
         );
       },
+      filter: (memo: Memo) =>
+        memo.name !== context.memoName && !context.relationList.some((relation) => relation.relatedMemo === memo.name),
     });
   };
 

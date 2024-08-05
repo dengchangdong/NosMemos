@@ -19,19 +19,11 @@ export default defineConfig({
         target: devProxyServer,
         xfwd: true,
       },
-      "^/memos.api.v2": {
+      "^/memos.api.v1": {
         target: devProxyServer,
         xfwd: true,
       },
-      "^/o/": {
-        target: devProxyServer,
-        xfwd: true,
-      },
-      "^/u/.+/rss.xml": {
-        target: devProxyServer,
-        xfwd: true,
-      },
-      "^/explore/rss.xml": {
+      "^/file": {
         target: devProxyServer,
         xfwd: true,
       },
