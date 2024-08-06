@@ -10,6 +10,7 @@ import UserAvatar from "./UserAvatar";
 
 import { useUserStore, useWorkspaceSettingStore } from "@/store/v1";
 import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
+const workspaceSettingStore = useWorkspaceSettingStore();
 const title = workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL).generalSetting?.customProfile?.title;
 
 interface Props {
