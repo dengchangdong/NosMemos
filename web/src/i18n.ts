@@ -60,7 +60,7 @@ i18n
     },
     fallbackLng: {
       ...fallbacks,
-      ...{ default: ["zh-Hans"] },
+      ...{ default: ["zh"] },
     } as FallbackLng,
   });
 
