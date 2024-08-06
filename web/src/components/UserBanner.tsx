@@ -9,21 +9,23 @@ import Icon from "./Icon";
 import UserAvatar from "./UserAvatar";
 
 import { useUserStore, useWorkspaceSettingStore } from "@/store/v1";
+import { WorkspaceGeneralSetting } from "@/types/proto/api/v1/workspace_setting_service";
 import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
-const workspaceSettingStore = useWorkspaceSettingStore();
-const title = workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL).generalSetting?.customProfile?.title;
 
 interface Props {
   collapsed?: boolean;
 }
 
 const UserBanner = (props: Props) => {
+  const workspaceSettingStore = useWorkspaceSettingStore();
+  const workspaceGeneralSetting =
+    workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL).generalSetting || WorkspaceGeneralSetting.fromPartial({});
   const { collapsed } = props;
   const t = useTranslate();
   const navigateTo = useNavigateTo();
   const user = useCurrentUser();
   //const title = user ? user.nickname || user.username : "嘀咕";
-  const title = user ? user.nickname || user.username : title;
+  const title = user ? user.nickname || user.username : workspaceGeneralSetting.customProfile?.title;
   const avatarUrl = user ? user.avatarUrl : "/full-logo.webp";
 
   const handleSignOut = async () => {
