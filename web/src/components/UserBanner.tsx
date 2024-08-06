@@ -8,6 +8,8 @@ import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 import UserAvatar from "./UserAvatar";
 
+import { WorkspaceGeneralSetting } from "@/types/proto/api/v1/workspace_setting_service";
+
 interface Props {
   collapsed?: boolean;
 }
