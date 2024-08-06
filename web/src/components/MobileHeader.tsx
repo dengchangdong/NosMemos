@@ -4,15 +4,22 @@ import useWindowScroll from "react-use/lib/useWindowScroll";
 import useResponsiveWidth from "@/hooks/useResponsiveWidth";
 import NavigationDrawer from "./NavigationDrawer";
 
+import { useUserStore, useWorkspaceSettingStore } from "@/store/v1";
+import { WorkspaceGeneralSetting } from "@/types/proto/api/v1/workspace_setting_service";
+import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
+
 interface Props {
   className?: string;
   children?: React.ReactNode;
 }
 
 const MobileHeader = (props: Props) => {
+  const workspaceSettingStore = useWorkspaceSettingStore();
+  const workspaceGeneralSetting =
+    workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL).generalSetting || WorkspaceGeneralSetting.fromPartial({});
   const { className, children } = props;
   const { sm } = useResponsiveWidth();
-  const [titleText] = useState("Memos");
+  const [titleText] = workspaceGeneralSetting.customProfile?.title;
   const { y: offsetTop } = useWindowScroll();
 
   return (
