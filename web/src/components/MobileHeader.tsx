@@ -19,7 +19,7 @@ const MobileHeader = (props: Props) => {
     workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL).generalSetting || WorkspaceGeneralSetting.fromPartial({});
   const { className, children } = props;
   const { sm } = useResponsiveWidth();
-  const [titleText] = workspaceGeneralSetting.customProfile?.title;
+  const titleText = workspaceGeneralSetting.customProfile?.title;
   const { y: offsetTop } = useWindowScroll();
 
   return (
