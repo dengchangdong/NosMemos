@@ -8,6 +8,7 @@ import { useTranslate } from "@/utils/i18n";
 import Icon from "./Icon";
 import UserAvatar from "./UserAvatar";
 
+import { useUserStore, useWorkspaceSettingStore } from "@/store/v1";
 import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
 const title = workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.GENERAL).generalSetting?.customProfile?.title;
 
